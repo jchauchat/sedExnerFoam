@@ -14,7 +14,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-suspension     on;
+suspension     off;
+
+erosionDeposition off;
 
 fallModel
 {

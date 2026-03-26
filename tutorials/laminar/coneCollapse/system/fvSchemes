@@ -34,6 +34,8 @@ divSchemes
     div(phip,Cs)   Gauss upwind phip;
     div(phi,C)     Gauss vanLeer; //Gamma 1;
     div(phir,C)    Gauss linear; //Gamma 1;
+// SEqn
+    div(phi,S)     Gauss limitedLinear 1;
 // pEqn
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 

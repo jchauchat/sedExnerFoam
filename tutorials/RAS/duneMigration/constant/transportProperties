@@ -24,6 +24,10 @@ CsMax    [0 0 0 0 0 0 0] 0.63; // max volumic sediment concentration
 
 reposeAngle      28;
 
+// * * * * * * * * * * * * * * salinity properties * * * * * * * * * * * * * //
+
+betaS   0.0254; // salinity density coef.: rhok = 1 + betaS * S
+
 // ************************************************************************* //
 
 transportModel  Newtonian;

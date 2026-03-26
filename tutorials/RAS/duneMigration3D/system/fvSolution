@@ -40,7 +40,7 @@ solvers
         relTol         0;
     }
     
-    p
+    p_rgh
     {
         solver          GAMG;
         tolerance       1e-06;
@@ -56,21 +56,21 @@ solvers
         mergeLevels     1;
     }
 
-    pFinal
+    p_rghFinal
     {
-        $p;
+        $p_rgh;
         tolerance       1e-6;
         relTol          0;
     }
 
-    pcorrFinal
+    "(pcorr|pcorrFinal)"
     {
-        $p;
+        $p_rgh;
         tolerance       1e-6;
         relTol          0;
     }
     
-    "(k|omega|Cs)"
+    "(k|omega|Cs|S)"
     {
         solver          PBiCG;
         preconditioner  DILU;
@@ -78,7 +78,7 @@ solvers
         relTol          0.001;
     }
 
-    "(kFinal|omegaFinal)"
+    "(kFinal|omegaFinal|SFinal)"
     {
         solver          PBiCG;
         preconditioner  DILU;
@@ -92,7 +92,7 @@ PIMPLE
     momentumPredictor 0;
     nOuterCorrectors  1;
     nCorrectors     1;
-    nNonOrthogonalCorrectors 0;
+    nNonOrthogonalCorrectors 1;
     correctAlpha    0;
     nAlphaCorr      1;
     pRefPoint       (-0.2 0.005 0.045);

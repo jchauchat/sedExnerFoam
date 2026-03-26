@@ -19,11 +19,11 @@ application     sedExnerFoam;
 
 startFrom       latestTime;
 
-startTime       10;
+startTime       0;
 
 stopAt          endTime;
 
-endTime         30;
+endTime         10;
 
 deltaT          1e-3;
 

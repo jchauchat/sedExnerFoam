@@ -186,10 +186,10 @@ else if (saturationType == "explicit")
        */
         // upwind interpolate qb on edge i
         vector qbEdgei = qbProjOld[owner[edgei]];
-    if ((qbProjOld[owner[edgei]] & LeProj[edgei]) < scalar(0.0))
-    {
-        qbEdgei = qbProjOld[neighbour[edgei]];
-    }
+        if ((qbProjOld[owner[edgei]] & LeProj[edgei]) < scalar(0.0))
+    	{
+        	qbEdgei = qbProjOld[neighbour[edgei]];
+    	}
         vector divLsQb = (deltaT * Lsat->value() / TsatCorr)
             * (qbEdgei & LeProj[edgei])
             * (qbEdgei / (Foam::mag(qbEdgei) + SMALL));

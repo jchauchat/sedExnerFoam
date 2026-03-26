@@ -159,7 +159,7 @@ else
     Info << abort(FatalError) << endl;
 }
 
-// /* test JC
+/* test JC
 // compute bedload flux on through boundary edges
 forAll(aMesh.boundary(), patchi)
 {
@@ -188,7 +188,7 @@ forAll(aMesh.boundary(), patchi)
         }
     }
 }
-//*/
+*/
 
 // cancel computed bedload flux where no more sediments are present
 if (bed.rigidBed())

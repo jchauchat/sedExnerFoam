@@ -39,7 +39,19 @@ fvOptions.constrain(UEqn);
 
 if (pimple.momentumPredictor())
 {
-    solve(UEqn == -fvc::grad(p));
-
+    //solve(UEqn == -fvc::grad(p));
+    solve
+        (
+            UEqn
+         ==
+            fvc::reconstruct
+            (
+                (
+                  - ghf*fvc::snGrad(rhok)
+                  - fvc::snGrad(p_rgh)
+                )*mesh.magSf()
+            )
+        );
+    
     fvOptions.correct(U);
 }

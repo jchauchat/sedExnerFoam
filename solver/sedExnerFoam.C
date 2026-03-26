@@ -30,7 +30,16 @@ Group
     grpBasicSolvers
 
 Description
-    Scalar transport and incompressible turbulent flow solver.
+    Hydro-morphodynamic model
+
+    \heading Required fields
+    \plaintable
+        Cs      | Suspended sediment concentration (Passive scalar)
+        S       | Salinity (Passive scalar)
+        U       | Velocity [m/s]
+        p       | Kinematic pressure, p/rho [m2/s2]
+        \<turbulence fields\> | As required by user selection
+    \endplaintable
 
 \*---------------------------------------------------------------------------*/
 //    \heading Solver details
@@ -192,6 +201,7 @@ int main(int argc, char *argv[])
             }
             
             #include "UEqn.H"
+            #include "SEqn.H"
             
             // --- Pressure corrector loop
             while (pimple.correct())
@@ -233,7 +243,9 @@ int main(int argc, char *argv[])
                 areaVectorField& qav = qavPtr.ref();
                 areaVectorField& qb = qbPtr.ref();
                 areaScalarField& beta = betaPtr.ref();
-                
+                areaVectorField& rigidBed = rigidBedPtr.ref(); 
+                areaScalarField& HsedBed = HsedBedPtr.ref();
+
                 // map areaFields to volFields for vizualisation
                 bed.vsm.ref().mapToVolume
                     (
@@ -265,7 +277,20 @@ int main(int argc, char *argv[])
                         beta,
                         betaVf.boundaryFieldRef()
                     );
-            }
+		if (bed.rigidBed())
+		  {
+		    bed.vsm.ref().mapToVolume
+		      (	
+		       rigidBed,
+		       rigidBedVf.boundaryFieldRef()
+			);
+		    bed.vsm.ref().mapToVolume
+		      (
+		       HsedBed,
+		       HsedBedVf.boundaryFieldRef()
+		       );
+		  }
+	    }
             runTime.write();
 
             runTime.printExecutionTime(Info);

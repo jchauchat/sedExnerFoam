@@ -20,12 +20,28 @@ License
 
 \*---------------------------------------------------------------------------*/
 
-Info<< "Reading field p\n" << endl;
-volScalarField p
+Info<< "Reading Salinity properties\n" << endl;
+
+Info<< "Reading field S\n" << endl;
+volScalarField S
 (
     IOobject
     (
-        "p",
+        "S",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+Info<< "Reading field p_rgh\n" << endl;
+volScalarField p_rgh
+(
+    IOobject
+    (
+        "p_rgh",
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
@@ -54,7 +70,24 @@ Info << "Reading/calculating face flux field phi\n" << endl;
 
 #include "createRDeltaT.H"
 
+// kinematic turbulent saline conductivity m2/s
+/*Info<< "Reading field alphat\n" << endl;
+volScalarField alphat
+(
+    IOobject
+    (
+        "alphat",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+    */
 #include "readGravitationalAcceleration.H"
+#include "readhRef.H"
+#include "gh.H"
 
 vector eg = (g / Foam::mag(g)).value();
 Info << "unit vector oriented with gradvity: eg = " << eg << endl;
@@ -106,7 +139,23 @@ if (transportProperties.found("Sc"))
 {
     Sc.value() = readScalar(transportProperties.lookup("Sc"));
 }
-
+dimensionedScalar betaS("betaS", dimless, 0);
+if (transportProperties.found("betaS"))
+{
+    betaS = readScalar(transportProperties.lookup("betaS"));
+}
+Info << "density factor for salinity: "
+    << betaS.value() << endl;
+dimensionedScalar Pr("Pr", dimless, 1);
+if (transportProperties.found("Pr"))
+{
+    Pr.value() = readScalar(transportProperties.lookup("Pr"));
+}
+dimensionedScalar Prt("Prt", dimless, 1);
+if (transportProperties.found("Prt"))
+{
+    Prt.value() = readScalar(transportProperties.lookup("Prt"));
+}
 Info<< "Reading suspensionProperties\n" << endl;
 IOdictionary suspensionProperties
 (
@@ -130,6 +179,26 @@ if (switchSuspension!="on" and switchSuspension!="off")
     Info << abort(FatalError) << endl;
 }
 Info << "suspension is " << switchSuspension << endl;
+
+const word erosionDeposition(suspensionProperties.lookup("erosionDeposition"));
+bool switchErosionDeposition = false;
+
+if (erosionDeposition=="on")
+{
+    switchErosionDeposition = true;
+}
+else if (erosionDeposition=="off")
+{
+    switchErosionDeposition = false;
+}
+else
+{
+    FatalError << erosionDeposition
+        << " is not a valid entry for erosionDeposition"
+        << ", valid options are: on off" << endl;
+    Info << abort(FatalError) << endl;
+}
+Info << "erosionDeposition is " << erosionDeposition << endl;
 
 word switchMULES = "off";
 if (suspensionProperties.found("MULESformulation"))
@@ -158,6 +227,9 @@ if (CsDiffusivity != "turbulent" and CsDiffusivity != "effective")
         << ", valid options are: turbulent effective" << endl;
     Info << abort(FatalError) << endl;
 }
+// ModifyMultiply cbRef formula by van Rijn (1984) by cbRefFact
+dimensionedScalar cbRefFact(dimless, 1);
+cbRefFact.value() = suspensionProperties.lookupOrDefault<scalar>("cbRefFact", 1);
 
 // add wall diffusivity for cells close to bed patches
 bool isWallDiff = false;
@@ -212,43 +284,57 @@ autoPtr<wallDist> bedDistPtr;  // wallDist for bed patches
 
 autoPtr<settlingModel> settlingModelPtr;
 
-if (switchSuspension=="on")
-{
-    Info<< "Reading field Cs" << endl;
-    CsPtr.reset
+Info<< "Reading field Cs" << endl;
+CsPtr.reset
+(
+    new volScalarField
     (
-        new volScalarField
+        IOobject
         (
-            IOobject
-            (
-                "Cs",
-                runTime.timeName(),
-                mesh,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh
-        )
-    );
+            "Cs",
+            runTime.timeName(),
+            mesh,
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        mesh
+    )
+);
+volScalarField& Cs = CsPtr.ref();  // suspended load
 
+// Kinematic density for buoyancy force
+volScalarField rhok
+(
+    IOobject
+    (
+        "rhok",
+        runTime.timeName(),
+        mesh,
+        IOobject::READ_IF_PRESENT,
+        IOobject::AUTO_WRITE
+    ),
+    1 + Cs * (rhoS - rhoF) / rhoF  + betaS * S
+
+);
+
+if (switchSuspension=="on")
+{    
     Info<< "Reading field Ws\n" << endl;
     WsPtr.reset
-    (
-        new volVectorField
         (
-            IOobject
+            new volVectorField
             (
-                "Ws",
-                runTime.timeName(),
-                mesh,
-                IOobject::MUST_READ,
-                IOobject::AUTO_WRITE
-            ),
-            mesh
-        )
-    );
-
-    volScalarField& Cs = CsPtr.ref();  // suspended load
+                IOobject
+                (
+                    "Ws",
+                    runTime.timeName(),
+                    mesh,
+                    IOobject::MUST_READ,
+                    IOobject::AUTO_WRITE
+                ),
+                mesh
+            )
+        );
     volVectorField& Ws = WsPtr.ref();  // settling velocity
 
     // Initialize Settling Model
@@ -279,7 +365,7 @@ if (switchSuspension=="on")
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(dimensionSet(0, 0, -1, 0, 0, 0, 0), Zero)
@@ -296,7 +382,7 @@ if (switchSuspension=="on")
                 runTime.timeName(),
                 mesh,
                 IOobject::NO_READ,
-                IOobject::NO_WRITE
+                IOobject::AUTO_WRITE
             ),
             mesh,
             dimensionedScalar(dimensionSet(0, 0, -1, 0, 0, 0, 0), Zero)
@@ -348,10 +434,45 @@ autoPtr<incompressible::turbulenceModel> turbulence
     incompressible::turbulenceModel::New(U, phi, laminarTransport)
 );
 
+volScalarField p
+(
+    IOobject
+    (
+        "p",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    p_rgh + rhok*gh
+);
+
 label pRefCell = 0;
 scalar pRefValue = 0.0;
-setRefCell(p, pimple.dict(), pRefCell, pRefValue);
-mesh.setFluxRequired(p.name());
+setRefCell
+(
+    p,
+    p_rgh,
+    pimple.dict(),
+    pRefCell,
+    pRefValue
+);
+
+if (p_rgh.needReference())
+{
+    p += dimensionedScalar
+    (
+        "p",
+        p.dimensions(),
+        pRefValue - getRefCellValue(p, pRefCell)
+    );
+}
+
+mesh.setFluxRequired(p_rgh.name());
+//label pRefCell = 0;
+//scalar pRefValue = 0.0;
+//setRefCell(p, pimple.dict(), pRefCell, pRefValue);
+//mesh.setFluxRequired(p.name());
 
 volVectorField shieldsVf
 (
@@ -463,6 +584,34 @@ volVectorField VelBfVf
     ),
     mesh,
     dimensionedVector(dimensionSet(0, 2, -1, 0, 0, 0, 0), Zero)
+);
+
+volVectorField rigidBedVf
+(
+    IOobject
+    (
+        "rigidBedVf",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedVector(dimensionSet(0, 1, 0, 0, 0, 0, 0), Zero)
+);
+
+volScalarField HsedBedVf
+(
+     IOobject
+    (
+        "HsedBedVf",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+    dimensionedScalar(dimensionSet(0, 1, 0, 0, 0, 0, 0), Zero)
 );
 
 #include "createMRF.H"

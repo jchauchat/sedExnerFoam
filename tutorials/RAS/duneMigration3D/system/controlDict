@@ -19,7 +19,7 @@ application     sedExnerFoam;
 
 startFrom       startTime;
 
-startTime       9;
+startTime       0;
 
 stopAt          endTime;
 

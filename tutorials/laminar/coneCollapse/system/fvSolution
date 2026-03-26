@@ -31,10 +31,10 @@ solvers
         relTol         0;
     }
     
-    p
+    p_rgh
     {
         solver          GAMG;
-        tolerance       1e-9;
+        tolerance       1e-06;
         relTol          0.0001;
         maxIter         30;
         smoother        DIC;
@@ -47,20 +47,31 @@ solvers
         mergeLevels     1;
     }
 
-    pFinal
+    p_rghFinal
     {
-        $p;
-        tolerance       1e-9;
+        $p_rgh;
+        tolerance       1e-6;
         relTol          0;
     }
 
     pcorrFinal
     {
-        $p;
+        $p_rgh;
         tolerance       1e-6;
         relTol          0;
     }
-
+    "(Cs|S)"
+    {
+        solver          smoothSolver;
+        smoother        symGaussSeidel;
+        tolerance       1e-6;
+        relTol          0;
+        minIter         1;
+    }
+    "(CsFinal|SFinal)"
+    {
+        $Cs;
+    }
 }
 
 PIMPLE

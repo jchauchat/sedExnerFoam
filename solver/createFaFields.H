@@ -597,8 +597,8 @@ if (bed.exist())
             ) & (g/mag(g)).value();
 
         Info << "width of sediment layer, max: "
-            << max(HsedBed).value() << " m, min: "
-            << min(HsedBed).value() << " m, mean: "
-            << average(HsedBed).value() << endl;
+            << gMax(HsedBed) << " m, min: "
+            << gMin(HsedBed) << " m, mean: "
+            << gAverage(HsedBed) << endl;
     }
 }

@@ -1,0 +1,5 @@
+foamListTimes -withZero -rm
+
+foamCleanPolyMesh
+rm -rf constant/C*
+rm log
